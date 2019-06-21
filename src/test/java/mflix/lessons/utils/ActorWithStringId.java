@@ -7,12 +7,16 @@ import java.util.Date;
 import java.util.List;
 
 public class ActorWithStringId {
+  @BsonProperty("_id")
   private String id;
 
   private String name;
+  @BsonProperty("date_of_birth")
   private Date dateOfBirth;
 
   private List awards;
+
+  @BsonProperty("num_movies")
   private int numMovies;
 
   public ActorWithStringId() { // constructor
