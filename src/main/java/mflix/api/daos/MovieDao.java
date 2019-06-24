@@ -192,15 +192,22 @@ public class MovieDao extends AbstractMFlixDao {
         Bson castFilter = Filters.in("genres", genres);
         // sort key
         Bson sort = Sorts.descending(sortKey);
-        List<Document> movies = new ArrayList<>();
-        // pagination like skip and limit in the code below
-        moviesCollection.find(castFilter)
-                .sort(sort)
-                .skip(skip)
-                .limit(limit)
-                .iterator()
-                .forEachRemaining(movies::add);
-        return movies;
+
+        //Solution #1
+//        return moviesCollection
+//                .find(castFilter)
+//                .sort(sort)
+//                .skip(skip)
+//                .limit(limit)
+//                .into(new ArrayList<>());
+
+        //Solution #2
+        List<Bson> pipeline = new ArrayList<>();
+        pipeline.add(Aggregates.match(castFilter));
+        pipeline.add(Aggregates.sort(sort));
+        pipeline.add(Aggregates.skip(skip));
+        pipeline.add(Aggregates.limit(limit));
+        return moviesCollection.aggregate(pipeline).into(new ArrayList<>());
     }
 
     private ArrayList<Integer> runtimeBoundaries() {
