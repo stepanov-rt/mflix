@@ -28,4 +28,18 @@ public class Session {
   public void setJwt(String jwt) {
     this.jwt = jwt;
   }
+
+
+  public Session(String userId, String jwt) {
+    this.userId = userId;
+    this.jwt = jwt;
+  }
+
+  @Override
+  public String toString() {
+    return "Session{" +
+            "userId='" + userId + '\'' +
+            ", jwt='" + jwt + '\'' +
+            '}';
+  }
 }

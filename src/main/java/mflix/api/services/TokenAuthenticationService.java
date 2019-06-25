@@ -21,76 +21,76 @@ import static java.util.Collections.emptyList;
 @Configuration
 public class TokenAuthenticationService {
 
-  @Value("${jwtExpirationInMs}")
-  private long jwtExpirationInMs;
+    @Value("${jwtExpirationInMs}")
+    private long jwtExpirationInMs;
 
-  @Value("${jwtSecret}")
-  private String jwtSecret;
+    @Value("${jwtSecret}")
+    private String jwtSecret;
 
-  private final String TOKEN_PREFIX = "Bearer";
-  private final String HEADER_STRING = "Authorization";
+    private final String TOKEN_PREFIX = "Bearer";
+    private final String HEADER_STRING = "Authorization";
 
-  private final Logger log;
+    private final Logger log;
 
-  public TokenAuthenticationService() {
-    super();
-    log = LoggerFactory.getLogger(this.getClass());
-  }
-
-  public String mintJWTHeader(String username) {
-    String JWT =
-        Jwts.builder()
-            .setSubject(username)
-            .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationInMs))
-            .signWith(SignatureAlgorithm.HS512, jwtSecret)
-            .compact();
-    return TOKEN_PREFIX + " " + JWT;
-  }
-
-  public void addAuthentication(HttpServletResponse res, String username) {
-    String headerValue = mintJWTHeader(username);
-    res.addHeader(HEADER_STRING, headerValue);
-  }
-
-  private String trimToken(String token) {
-    return token.replace(TOKEN_PREFIX, "").trim();
-  }
-
-  public String getAuthenticationUser(String token) {
-    try {
-      return Jwts.parser()
-          .setSigningKey(jwtSecret)
-          .parseClaimsJws(trimToken(token))
-          .getBody()
-          .getSubject();
-    } catch (Exception e) {
-      log.error("Cannot validate user token `{}`: error thrown - {}", token, e.getMessage());
+    public TokenAuthenticationService() {
+        super();
+        log = LoggerFactory.getLogger(this.getClass());
     }
-    return null;
-  }
 
-  public Authentication getAuthentication(HttpServletRequest request) {
-    String token = request.getHeader(HEADER_STRING);
-    if (token != null) {
-      // parse the token.
-      String user = getAuthenticationUser(token);
-      return user != null ? new UsernamePasswordAuthenticationToken(user, null, emptyList()) : null;
+    public String mintJWTHeader(String username) {
+        String JWT =
+                Jwts.builder()
+                        .setSubject(username)
+                        .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationInMs))
+                        .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                        .compact();
+        return TOKEN_PREFIX + " " + JWT;
     }
-    return null;
-  }
 
-  public String generateToken(Authentication authentication) {
+    public void addAuthentication(HttpServletResponse res, String username) {
+        String headerValue = mintJWTHeader(username);
+        res.addHeader(HEADER_STRING, headerValue);
+    }
 
-    UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+    private String trimToken(String token) {
+        return token.replace(TOKEN_PREFIX, "").trim();
+    }
 
-    Date now = new Date();
-    Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+    public String getAuthenticationUser(String token) {
+        try {
+            return Jwts.parser()
+                    .setSigningKey(jwtSecret)
+                    .parseClaimsJws(trimToken(token))
+                    .getBody()
+                    .getSubject();
+        } catch (Exception e) {
+            log.error("Cannot validate user token `{}`: error thrown - {}", token, e.getMessage());
+        }
+        return null;
+    }
 
-    return Jwts.builder()
-        .setSubject(userPrincipal.getEmail())
-        .setIssuedAt(new Date())
-        .setExpiration(expiryDate)
-        .signWith(SignatureAlgorithm.HS512, jwtSecret)
-        .compact();
-  }
+    public Authentication getAuthentication(HttpServletRequest request) {
+        String token = request.getHeader(HEADER_STRING);
+        if (token != null) {
+            // parse the token.
+            String user = getAuthenticationUser(token);
+            return user != null ? new UsernamePasswordAuthenticationToken(user, null, emptyList()) : null;
+        }
+        return null;
+    }
+
+    public String generateToken(Authentication authentication) {
+
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+
+        return Jwts.builder()
+                .setSubject(userPrincipal.getEmail())
+                .setIssuedAt(new Date())
+                .setExpiration(expiryDate)
+                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
+    }
 }
