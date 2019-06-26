@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class MovieDao extends AbstractMFlixDao {
@@ -43,10 +40,7 @@ public class MovieDao extends AbstractMFlixDao {
      * @return true if valid movieId.
      */
     private boolean validIdValue(String movieId) {
-        //TODO> Ticket: Handling Errors - implement a way to catch a
-        //any potential exceptions thrown while validating a movie id.
-        //Check out this method's use in the method that follows.
-        return true;
+        return movieId.matches("-?[0-9a-fA-F]+");
     }
 
     /**
@@ -60,16 +54,13 @@ public class MovieDao extends AbstractMFlixDao {
         if (!validIdValue(movieId)) {
             return null;
         }
-
-        List<Bson> pipeline = new ArrayList<>();
-        // match stage to find movie
         Bson match = Aggregates.match(Filters.eq("_id", new ObjectId(movieId)));
-        pipeline.add(match);
-        // TODO> Ticket: Get Comments - implement the lookup stage that allows the comments to
-        // retrieved with Movies.
-        Document movie = moviesCollection.aggregate(pipeline).first();
-
-        return movie;
+        List<Variable<String>> let = Collections.singletonList(new Variable<>("id", "$_id"));
+        List<Bson> lookUpPipeline = Arrays.asList(
+                Aggregates.match(Filters.expr(new Document("$eq", Arrays.asList("$movie_id", "$$id")))),
+                Aggregates.sort(Sorts.descending("date")));
+        Bson lookup = Aggregates.lookup("comments", let, lookUpPipeline, "comments");
+        return moviesCollection.aggregate(Arrays.asList(match, lookup)).first();
     }
 
     /**
