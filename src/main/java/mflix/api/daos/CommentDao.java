@@ -4,8 +4,10 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoWriteException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Comment;
 import mflix.api.models.Critic;
@@ -21,9 +23,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
@@ -77,7 +77,7 @@ public class CommentDao extends AbstractMFlixDao {
         try {
             commentCollection.insertOne(comment);
             comment = getComment(comment.getId());
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             throw new IncorrectDaoOperation("Some error occurred while insert");
         }
         return comment;
@@ -97,10 +97,9 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successfully updates the comment text.
      */
     public boolean updateComment(String commentId, String text, String email) {
-        Map<String, Object> mathchMap = new HashMap(2);
-        mathchMap.put("_id", new ObjectId(commentId));
-        mathchMap.put("email", email);
-        Bson filter = new Document(mathchMap);
+        Bson filter = Filters.and(
+                Filters.eq("email", email),
+                Filters.eq("_id", new ObjectId(commentId)));
         Bson update = Updates.set("text", text);
         UpdateOptions options = new UpdateOptions().upsert(true);
         try {
@@ -119,12 +118,22 @@ public class CommentDao extends AbstractMFlixDao {
      * @return true if successful deletes the comment.
      */
     public boolean deleteComment(String commentId, String email) {
-        // TODO> Ticket Delete Comments - Implement the method that enables the deletion of a user
-        // comment
-        // TIP: make sure to match only users that own the given commentId
-        // TODO> Ticket Handling Errors - Implement a try catch block to
-        // handle a potential write exception when given a wrong commentId.
-        return false;
+        Bson filter = Filters.and(
+                Filters.eq("email", email),
+                Filters.eq("_id", new ObjectId(commentId)));
+        try {
+            DeleteResult deleteResult = commentCollection.deleteOne(filter);
+            return deleteResult.getDeletedCount() != 0;
+        } catch (MongoWriteException e) {
+            return false;
+        }
+//        Solution #2
+//        try {
+//            Comment comment = commentCollection.findOneAndDelete(filter);
+//            return comment != null;
+//        } catch (MongoWriteException wrEx) {
+//            throw new IncorrectDaoOperation("Deletion was failed", wrEx);
+//        }
     }
 
     /**
