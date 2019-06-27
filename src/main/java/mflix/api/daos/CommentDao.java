@@ -2,11 +2,10 @@ package mflix.api.daos;
 
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoWriteException;
+import com.mongodb.ReadConcern;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.UpdateOptions;
-import com.mongodb.client.model.Updates;
+import com.mongodb.client.model.*;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Comment;
@@ -23,6 +22,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
@@ -144,13 +144,20 @@ public class CommentDao extends AbstractMFlixDao {
      * @return List {@link Critic} objects.
      */
     public List<Critic> mostActiveCommenters() {
-        List<Critic> mostActive = new ArrayList<>();
-        // // TODO> Ticket: User Report - execute a command that returns the
-        // // list of 20 users, group by number of comments. Don't forget,
-        // // this report is expected to be produced with an high durability
-        // // guarantee for the returned documents. Once a commenter is in the
-        // // top 20 of users, they become a Critic, so mostActive is composed of
-        // // Critic objects.
-        return mostActive;
+        Bson groupStage = Aggregates.group("$email", Accumulators.sum("count", 1));
+        Bson limit = Aggregates.limit(20);
+        Bson sortStage = Aggregates.sort(Sorts.descending("count"));
+        return commentCollection
+                .withReadConcern(ReadConcern.MAJORITY)
+                .aggregate(Arrays.asList(groupStage, sortStage, limit), Critic.class)
+                .into(new ArrayList<>());
+
+//        Solution #2
+//        return commentCollection.withReadConcern(ReadConcern.MAJORITY).aggregate(
+//                Arrays.asList(
+//                        Aggregates.group("$email", Accumulators.sum("count", 1)),
+//                        Aggregates.sort(Sorts.descending("count")),
+//                        Aggregates.limit(20)
+//                ), Critic.class).into(new ArrayList<>());
     }
 }
