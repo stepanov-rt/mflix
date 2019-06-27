@@ -110,9 +110,9 @@ public class UpdateCreateCommentTest extends TicketTest {
     dao.addComment(fakeComment);
     String newCommentText = randomText(20);
 
-    Assert.assertTrue(
+    Assert.assertFalse(
         "Cannot update comments not owned by user",
-        !dao.updateComment(fakeComment.getId(), newCommentText, notValidEmail));
+        dao.updateComment(fakeComment.getId(), newCommentText, notValidEmail));
   }
 
   @Test(expected = IncorrectDaoOperation.class)
